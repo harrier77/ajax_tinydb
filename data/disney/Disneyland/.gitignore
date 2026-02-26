@@ -1,0 +1,5 @@
+# Escludi solo i file dati JSON
+*.json
+
+# Includi come esempio (senza contenuto dati)
+!*

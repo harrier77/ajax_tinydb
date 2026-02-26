@@ -1,0 +1,11 @@
+# Ignora tutti i JSON tranne quelli di esempio
+**/*.json
+
+# Includi file di esempio
+!/database.json
+!/database_pointer.json
+!/XVII_LEGISLATURA_pointer.json
+!/disney/root.json
+
+
+

@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Browser - Client Side</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #f8f9fa;
+            color: #202124;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow-x: auto;
+        }
+        
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background-color: #fff;
+            border-right: 1px solid #dadce0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #dadce0;
+            background-color: #fff;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #5f6368;
+        }
+        
+        .nav-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 0;
+        }
+        
+        .nav-section-title {
+            padding: 8px 20px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: #5f6368;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            color: #202124;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .nav-item:hover { background-color: #f1f3f4; }
+        .nav-item.active { background-color: #e8f0fe; color: #1967d2; }
+        
+        .nav-item-left { display: flex; align-items: center; gap: 10px; }
+        .nav-item .arrow { opacity: 0; transition: opacity 0.2s; }
+        .nav-item:hover .arrow, .nav-item.active .arrow { opacity: 1; }
+        
+        .content-panels {
+            display: flex;
+            flex: 1;
+            overflow-x: auto;
+            background-color: #f8f9fa;
+        }
+        
+        .panel {
+            width: 400px;
+            min-width: 400px;
+            background-color: #fff;
+            border-right: 1px solid #dadce0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 16px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-title { font-size: 16px; font-weight: 500; color: #202124; }
+        .panel-subtitle { font-size: 12px; color: #5f6368; margin-top: 2px; }
+        
+        .panel-body { flex: 1; overflow-y: auto; }
+        
+        .doc-list { list-style: none; }
+        
+        .doc-item { border-bottom: 1px solid #e8eaed; }
+        .doc-item:hover { background-color: #f8f9fa; }
+        .doc-item.active { background-color: #e8f0fe; }
+        
+        .doc-link {
+            display: block;
+            padding: 16px 20px;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .doc-header-inline { display: flex; align-items: center; gap: 8px; }
+        .doc-id-inline { font-family: 'Roboto Mono', monospace; font-size: 13px; color: #1967d2; }
+        .doc-title-inline { font-size: 14px; font-weight: 500; color: #202124; }
+        .doc-icon { font-size: 14px; }
+        
+        .doc-preview {
+            font-size: 12px;
+            color: #5f6368;
+            margin-top: 4px;
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .field-label {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #5f6368;
+            margin-bottom: 8px;
+        }
+        
+        .subcollections { margin-top: 20px; padding-top: 20px; border-top: 1px solid #dadce0; }
+        .subcollection-item { display: flex; align-items: center; gap: 8px; padding: 10px 0; color: #1967d2; cursor: pointer; }
+        
+        .field-group { margin-bottom: 24px; padding: 0 20px; }
+        
+        .field-editable {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .field-value-display { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .field-value-input {
+            flex: 1;
+            padding: 4px 8px;
+            border: 2px solid #4285f4;
+            border-radius: 4px;
+            font-size: 13px;
+            display: none;
+        }
+        
+        .field-editable.editing .field-value-display { display: none; }
+        .field-editable.editing .field-value-input { display: inline-block; }
+        
+        .field-editable .btn-edit, .field-editable .btn-save, .field-editable .btn-cancel {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            opacity: 0.6;
+        }
+        
+        .field-editable .btn-save, .field-editable .btn-cancel { display: none; }
+        .field-editable.editing .btn-edit { display: none; }
+        .field-editable.editing .btn-save, .field-editable.editing .btn-cancel { display: inline-block; }
+        
+        .field-editable .btn-edit:hover, .field-editable:hover .btn-edit { opacity: 1; }
+        .field-editable .btn-save:hover { background-color: #e6f4ea; }
+        .field-editable .btn-cancel:hover { background-color: #fce8e6; }
+        
+        .save-status { font-size: 12px; margin-left: 4px; }
+        .save-status.success { color: #34a853; }
+        .save-status.error { color: #ea4335; }
+        
+        .json-toggle {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            user-select: none;
+        }
+        
+        .json-toggle:hover { color: #1967d2; }
+        
+        .json-content { display: none; }
+        .json-content.visible { display: block; }
+        
+        .json-viewer {
+            background-color: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .breadcrumb-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dadce0;
+            padding: 8px 20px;
+            font-size: 13px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .breadcrumb-bar a { color: #1967d2; text-decoration: none; cursor: pointer; }
+        .breadcrumb-bar a:hover { text-decoration: underline; }
+        .breadcrumb-bar span { color: #9aa0a6; }
+        .breadcrumb-bar strong { color: #202124; }
+        
+        .empty-state { text-align: center; padding: 64px 20px; color: #5f6368; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+        
+        .loading { text-align: center; padding: 40px; color: #5f6368; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>JSON Browser</h1>
+            </div>
+            <nav class="nav-section">
+                <div class="nav-section-title">Collections</div>
+                <div id="collections-list"></div>
+            </nav>
+        </aside>
+        
+        <div class="content-panels" id="content-panels">
+            <div class="loading">Caricamento dati...</div>
+        </div>
+    </div>
+    
+    <script>
+        const dbData = {{ data|tojson|safe }};
+        
+        let currentState = {
+            collection: null,
+            docId: null,
+            fieldPath: []
+        };
+        
+        function getCollectionKeys() {
+            return Object.keys(dbData);
+        }
+        
+        function getCollection(name) {
+            return dbData[name] || {};
+        }
+        
+        function getDoc(collection, docId) {
+            const col = getCollection(collection);
+            return col[docId] || null;
+        }
+        
+        function getNestedValue(obj, path) {
+            if (!path || path.length === 0) return obj;
+            let current = obj;
+            for (const part of path) {
+                if (current === null || current === undefined) return undefined;
+                if (typeof current === 'object') {
+                    current = current[part];
+                } else {
+                    return undefined;
+                }
+            }
+            return current;
+        }
+        
+        function setNestedValue(obj, path, value) {
+            if (path.length === 0) return;
+            let current = obj;
+            for (let i = 0; i < path.length - 1; i++) {
+                current = current[path[i]];
+            }
+            current[path[path.length - 1]] = value;
+        }
+        
+        function getFieldType(value) {
+            if (value === null || value === undefined) return 'null';
+            if (Array.isArray(value)) return 'array';
+            if (typeof value === 'object') return 'object';
+            return 'simple';
+        }
+        
+        function getDocTitle(doc) {
+            return doc.nome || doc.id || doc._id || doc.title || Object.values(doc)[0] || '';
+        }
+        
+        function renderBreadcrumb() {
+            let html = '<div class="breadcrumb-bar">';
+            html += `<a onclick="navigateToCollection(null)">Home</a>`;
+            
+            if (currentState.collection) {
+                html += `<span>></span><a onclick="navigateToCollection('${currentState.collection}')">${currentState.collection}</a>`;
+                
+                if (currentState.docId) {
+                    html += `<span>></span><a onclick="navigateToDoc('${currentState.collection}', '${currentState.docId}')">${currentState.docId}</a>`;
+                    
+                    if (currentState.fieldPath.length > 0) {
+                        let pathStr = '';
+                        for (const part of currentState.fieldPath) {
+                            pathStr += '/' + part;
+                            html += `<span>></span><a onclick="navigateToField('${currentState.collection}', '${currentState.docId}', '${pathStr.substring(1)}')">${part}</a>`;
+                        }
+                    }
+                }
+            }
+            html += '</div>';
+            return html;
+        }
+        
+        function renderCollectionsList() {
+            const keys = getCollectionKeys();
+            let html = '';
+            for (const key of keys) {
+                const isActive = currentState.collection === key && !currentState.docId;
+                html += `<div class="nav-item ${isActive ? 'active' : ''}" onclick="navigateToCollection('${key}')">
+                    <span class="nav-item-left">
+                        <span class="doc-icon">📁</span>
+                        ${key}
+                    </span>
+                    <span class="arrow">›</span>
+                </div>`;
+            }
+            return html;
+        }
+        
+        function renderDocumentsList(collection) {
+            const col = getCollection(collection);
+            const docIds = Object.keys(col);
+            let html = `<div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">${collection}</div>
+                        <div class="panel-subtitle">${docIds.length} documenti</div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <ul class="doc-list">`;
+            
+            for (const docId of docIds) {
+                const doc = col[docId];
+                const title = getDocTitle(doc);
+                const isActive = currentState.docId === docId;
+                html += `<li class="doc-item ${isActive ? 'active' : ''}">
+                    <a class="doc-link" onclick="navigateToDoc('${collection}', '${docId}')">
+                        <div class="doc-header-inline">
+                            <span class="doc-icon">📄</span>
+                            <span class="doc-id-inline">${docId}</span>
+                            <span class="doc-title-inline">${title}</span>
+                        </div>
+                        <div class="doc-preview">${JSON.stringify(doc).substring(0, 80)}...</div>
+                    </a>
+                </li>`;
+            }
+            
+            html += `</ul></div></div>`;
+            return html;
+        }
+        
+        function renderDocumentDetail(collection, docId) {
+            const doc = getDoc(collection, docId);
+            if (!doc) return '<div class="empty-state">Documento non trovato</div>';
+            
+            const title = getDocTitle(doc);
+            let html = `<div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">${title}</div>
+                        <div class="panel-subtitle">ID: ${docId}</div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="subcollections">
+                        <div class="field-label">Campi (${Object.keys(doc).length})</div>
+                        <ul class="doc-list">`;
+            
+            for (const [fieldName, fieldValue] of Object.entries(doc)) {
+                const fieldType = getFieldType(fieldValue);
+                
+                if (fieldType === 'object' || fieldType === 'array') {
+                    const count = fieldType === 'array' ? fieldValue.length : Object.keys(fieldValue).length;
+                    const icon = fieldType === 'array' ? '📋' : '📂';
+                    const label = fieldType === 'array' ? `Array [${count} items]` : `Oggetto [${count} campi]`;
+                    html += `<li class="doc-item">
+                        <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fieldName}')">
+                            <div class="doc-header-inline">
+                                <span class="doc-icon">${icon}</span>
+                                <span class="doc-title-inline">${fieldName}</span>
+                            </div>
+                            <div class="doc-preview">${label}</div>
+                        </a>
+                    </li>`;
+                } else {
+                    html += `<li class="doc-item">
+                        <div class="doc-link" style="cursor: default;">
+                            <div class="doc-header-inline">
+                                <span class="doc-icon">📄</span>
+                                <span class="doc-title-inline">${fieldName}</span>
+                            </div>
+                            <div class="doc-preview">
+                                ${renderEditableField(collection, docId, fieldName, fieldValue)}
+                            </div>
+                        </div>
+                    </li>`;
+                }
+            }
+            
+            html += `</ul></div>`;
+            
+            html += `<div class="field-group">
+                <div class="json-toggle" onclick="toggleJson(this)">
+                    <span>▶</span> Contenuto JSON
+                </div>
+                <div class="json-content">
+                    <pre class="json-viewer">${JSON.stringify(doc, null, 2)}</pre>
+                </div>
+            </div>`;
+            
+            html += `</div></div>`;
+            return html;
+        }
+        
+        function renderFieldValue(collection, docId, fieldPath) {
+            const doc = getDoc(collection, docId);
+            const value = getNestedValue(doc, fieldPath);
+            const fieldName = fieldPath[fieldPath.length - 1];
+            const parentPath = fieldPath.slice(0, -1);
+            const parentValue = getNestedValue(doc, parentPath);
+            
+            if (value === undefined) return '<div class="empty-state">Campo non trovato</div>';
+            
+            const fieldType = getFieldType(value);
+            let html = `<div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">${fieldName}</div>
+                        <div class="panel-subtitle">${parentPath.join('.') || 'root'}</div>
+                    </div>
+                </div>
+                <div class="panel-body">`;
+            
+            if (fieldType === 'array') {
+                html += `<div class="subcollections">
+                    <div class="field-label">Elementi (${value.length})</div>
+                    <ul class="doc-list">`;
+                
+                value.forEach((item, idx) => {
+                    const itemType = getFieldType(item);
+                    const fullPath = [...fieldPath, idx].join('.');
+                    
+                    if (itemType === 'object') {
+                        const title = getDocTitle(item);
+                        html += `<li class="doc-item">
+                            <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fullPath}')">
+                                <div class="doc-header-inline">
+                                    <span class="doc-id-inline">#${idx}</span>
+                                    <span class="doc-title-inline">${title}</span>
+                                </div>
+                                <div class="doc-preview">Oggetto con ${Object.keys(item).length} campi</div>
+                            </a>
+                        </li>`;
+                    } else {
+                        html += `<li class="doc-item">
+                            <div class="doc-link" style="cursor: default;">
+                                <div class="doc-header-inline">
+                                    <span class="doc-id-inline">#${idx}</span>
+                                </div>
+                                <div class="doc-preview">
+                                    ${renderEditableField(collection, docId, fullPath, item)}
+                                </div>
+                            </div>
+                        </li>`;
+                    }
+                });
+                
+                html += `</ul></div>`;
+            } else if (fieldType === 'object') {
+                html += `<div class="subcollections">
+                    <div class="field-label">Campi (${Object.keys(value).length})</div>
+                    <ul class="doc-list">`;
+                
+                for (const [subFieldName, subFieldValue] of Object.entries(value)) {
+                    const subFieldType = getFieldType(subFieldValue);
+                    const fullPath = [...fieldPath, subFieldName].join('.');
+                    
+                    if (subFieldType === 'object' || subFieldType === 'array') {
+                        const count = subFieldType === 'array' ? subFieldValue.length : Object.keys(subFieldValue).length;
+                        const icon = subFieldType === 'array' ? '📋' : '📂';
+                        const label = subFieldType === 'array' ? `Array [${count} items]` : `Oggetto [${count} campi]`;
+                        html += `<li class="doc-item">
+                            <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fullPath}')">
+                                <div class="doc-header-inline">
+                                    <span class="doc-icon">${icon}</span>
+                                    <span class="doc-title-inline">${subFieldName}</span>
+                                </div>
+                                <div class="doc-preview">${label}</div>
+                            </a>
+                        </li>`;
+                    } else {
+                        html += `<li class="doc-item">
+                            <div class="doc-link" style="cursor: default;">
+                                <div class="doc-header-inline">
+                                    <span class="doc-icon">📄</span>
+                                    <span class="doc-title-inline">${subFieldName}</span>
+                                </div>
+                                <div class="doc-preview">
+                                    ${renderEditableField(collection, docId, fullPath, subFieldValue)}
+                                </div>
+                            </div>
+                        </li>`;
+                    }
+                }
+                
+                html += `</ul></div>`;
+            } else {
+                html += `<div class="field-group">
+                    <div class="field-label">Valore</div>
+                    ${renderEditableField(collection, docId, fieldPath.join('.'), value)}
+                </div>`;
+            }
+            
+            html += `<div class="field-group">
+                <div class="json-toggle" onclick="toggleJson(this)">
+                    <span>▶</span> Contenuto JSON
+                </div>
+                <div class="json-content">
+                    <pre class="json-viewer">${JSON.stringify(value, null, 2)}</pre>
+                </div>
+            </div>`;
+            
+            html += `</div></div>`;
+            return html;
+        }
+        
+        function renderEditableField(collection, docId, fieldPath, value) {
+            const isSimple = typeof value !== 'object';
+            return `<div class="field-editable" data-field-path="${fieldPath}" data-doc-id="${docId}" data-collection="${collection}">
+                <span class="field-value-display">${value}</span>
+                <input type="text" class="field-value-input" value="${value}">
+                <button class="btn-edit" onclick="startEdit(this)" title="Modifica">✏️</button>
+                <button class="btn-save" onclick="saveEdit(this)">💾</button>
+                <button class="btn-cancel" onclick="cancelEdit(this)">❌</button>
+                <span class="save-status"></span>
+            </div>`;
+        }
+        
+        function render() {
+            document.getElementById('collections-list').innerHTML = renderCollectionsList();
+            
+            const panels = document.getElementById('content-panels');
+            let html = renderBreadcrumb();
+            
+            if (currentState.collection) {
+                html += renderDocumentsList(currentState.collection);
+                
+                if (currentState.docId) {
+                    html += renderDocumentDetail(currentState.collection, currentState.docId);
+                    
+                    if (currentState.fieldPath.length > 0) {
+                        html += renderFieldValue(currentState.collection, currentState.docId, currentState.fieldPath);
+                    }
+                }
+            } else {
+                html += `<div class="empty-state">
+                    <div class="empty-state-icon">📂</div>
+                    <h3>Seleziona una collezione</h3>
+                    <p>Scegli una collezione dalla sidebar per iniziare</p>
+                </div>`;
+            }
+            
+            panels.innerHTML = html;
+        }
+        
+        function navigateToCollection(collection) {
+            currentState = { collection, docId: null, fieldPath: [] };
+            render();
+        }
+        
+        function navigateToDoc(collection, docId) {
+            currentState = { collection, docId, fieldPath: [] };
+            render();
+        }
+        
+        function navigateToField(collection, docId, fieldPath) {
+            const path = fieldPath.split('/').filter(p => p);
+            currentState = { collection, docId, fieldPath: path };
+            render();
+        }
+        
+        function toggleJson(el) {
+            const content = el.nextElementSibling;
+            const arrow = el.querySelector('span');
+            if (content.classList.contains('visible')) {
+                content.classList.remove('visible');
+                arrow.textContent = '▶';
+            } else {
+                content.classList.add('visible');
+                arrow.textContent = '▼';
+            }
+        }
+        
+        function startEdit(btn) {
+            const container = btn.closest('.field-editable');
+            container.classList.add('editing');
+            const input = container.querySelector('.field-value-input');
+            input.focus();
+            input.select();
+        }
+        
+        function cancelEdit(btn) {
+            const container = btn.closest('.field-editable');
+            container.classList.remove('editing');
+            const display = container.querySelector('.field-value-display');
+            const input = container.querySelector('.field-value-input');
+            input.value = display.textContent;
+            const status = container.querySelector('.save-status');
+            status.textContent = '';
+        }
+        
+        async function saveEdit(btn) {
+            const container = btn.closest('.field-editable');
+            const input = container.querySelector('.field-value-input');
+            const display = container.querySelector('.field-value-display');
+            const status = container.querySelector('.save-status');
+            
+            const fieldPath = container.dataset.fieldPath;
+            const docId = container.dataset.docId;
+            const collection = container.dataset.collection;
+            const newValue = input.value;
+            
+            try {
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        collection,
+                        doc_id: docId,
+                        field_path: fieldPath,
+                        value: newValue
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    display.textContent = newValue;
+                    status.textContent = 'Salvato!';
+                    status.className = 'save-status success';
+                    container.classList.remove('editing');
+                    
+                    const doc = getDoc(collection, docId);
+                    const pathParts = fieldPath.split('.');
+                    setNestedValue(doc, pathParts, newValue);
+                    
+                    setTimeout(() => { status.textContent = ''; }, 2000);
+                } else {
+                    status.textContent = 'Errore: ' + result.error;
+                    status.className = 'save-status error';
+                }
+            } catch (e) {
+                status.textContent = 'Errore: ' + e.message;
+                status.className = 'save-status error';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', render);
+    </script>
+</body>
+</html>

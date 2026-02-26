@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyDB Browser - {{ path if path else 'Database' }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #f8f9fa;
+            color: #202124;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow-x: auto;
+        }
+        
+        /* Sidebar - Collezione Root */
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background-color: #fff;
+            border-right: 1px solid #dadce0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #dadce0;
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #5f6368;
+        }
+        
+        .sidebar-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #5f6368;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .sidebar-toggle-btn:hover {
+            background-color: #f1f3f4;
+            color: #1967d2;
+        }
+        
+        .sidebar.collapsed {
+            width: 60px;
+            min-width: 60px;
+        }
+        
+        .sidebar.collapsed .sidebar-header h1,
+        .sidebar.collapsed .db-selector,
+        .sidebar.collapsed .nav-section {
+            display: none;
+        }
+        
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 20px 10px;
+        }
+        
+        .db-selector {
+            margin-top: 12px;
+        }
+        
+        .db-selector form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .db-selector select {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #202124;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .db-selector select:hover {
+            border-color: #1967d2;
+        }
+        
+        .db-selector select:focus {
+            outline: none;
+            border-color: #1967d2;
+            box-shadow: 0 0 0 2px rgba(25, 103, 210, 0.1);
+        }
+        
+        .db-selector button {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #1967d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .db-selector button:hover {
+            background: #1557b0;
+        }
+        
+        .nav-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 0;
+        }
+        
+        .nav-section-title {
+            padding: 8px 20px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: #5f6368;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            color: #202124;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .nav-item:hover {
+            background-color: #f1f3f4;
+        }
+        
+        .nav-item.active {
+            background-color: #e8f0fe;
+            color: #1967d2;
+        }
+        
+        .nav-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-item .icon {
+            font-size: 16px;
+        }
+        
+        .nav-item .arrow {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .nav-item:hover .arrow {
+            opacity: 1;
+        }
+        
+        .nav-item.active .arrow {
+            opacity: 1;
+            color: #1967d2;
+        }
+        
+        /* Pannelli Contenuto */
+        .content-panels {
+            display: flex;
+            flex: 1;
+            overflow-x: auto;
+            background-color: #f8f9fa;
+        }
+        
+        .panel {
+            width: 400px;
+            min-width: 400px;
+            background-color: #fff;
+            border-right: 1px solid #dadce0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.3s ease, min-width 0.3s ease;
+        }
+        
+        /* Classi per dimensioni dinamiche dei pannelli */
+        .panel-compact {
+            width: 300px !important;
+            min-width: 300px !important;
+        }
+        
+        .panel-narrow {
+            width: 240px !important;
+            min-width: 240px !important;
+        }
+        
+        .panel-ultra-narrow {
+            width: 200px !important;
+            min-width: 200px !important;
+        }
+        
+        .panel:last-child {
+            border-right: none;
+        }
+        
+        .panel-header {
+            padding: 16px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #202124;
+        }
+        
+        .panel-subtitle {
+            font-size: 12px;
+            color: #5f6368;
+            margin-top: 2px;
+        }
+        
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .panel-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #5f6368;
+        }
+        
+        .panel-btn:hover {
+            background: #e8f0fe;
+            border-color: #1967d2;
+            color: #1967d2;
+        }
+        
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            padding: 12px 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dadce0;
+            font-size: 13px;
+            color: #5f6368;
+        }
+        
+        /* Documenti Lista */
+        .doc-list {
+            list-style: none;
+        }
+        
+        .doc-item {
+            border-bottom: 1px solid #e8eaed;
+            transition: background-color 0.15s;
+        }
+        
+        .doc-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .doc-item.active {
+            background-color: #e8f0fe;
+        }
+        
+        .doc-link {
+            display: block;
+            padding: 16px 20px;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .doc-id {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            color: #1967d2;
+            margin-bottom: 4px;
+        }
+        
+        .doc-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #202124;
+            margin-bottom: 4px;
+        }
+        
+        /* Array items inline display */
+        .array-items .doc-link {
+            padding: 12px 20px;
+        }
+        
+        .doc-header-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .doc-id-inline {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            color: #1967d2;
+            flex-shrink: 0;
+        }
+        
+        .doc-title-inline {
+            font-size: 14px;
+            font-weight: 500;
+            color: #202124;
+        }
+        
+        .doc-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .doc-preview {
+            font-size: 12px;
+            color: #5f6368;
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        /* Documento Dettaglio */
+        .doc-detail {
+            padding: 20px;
+        }
+        
+        .doc-detail-id {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 18px;
+            color: #1967d2;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #dadce0;
+        }
+        
+        .field-group {
+            margin-bottom: 24px;
+        }
+        
+        .field-label {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #5f6368;
+            margin-bottom: 8px;
+        }
+        
+        .field-value {
+            font-size: 14px;
+            color: #202124;
+            line-height: 1.5;
+        }
+        
+        .json-viewer {
+            background-color: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* JSON Toggle */
+        .json-toggle {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        
+        .json-toggle:hover {
+            color: #1967d2;
+        }
+        
+        .json-toggle-icon {
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        /* Subcollections */
+        .subcollections {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dadce0;
+        }
+        
+        .subcollection-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            color: #1967d2;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .subcollection-item:hover {
+            color: #1557b0;
+        }
+        
+        .subcollection-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 64px 20px;
+            color: #5f6368;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #202124;
+        }
+        
+        .empty-state p {
+            font-size: 14px;
+        }
+        
+        /* Breadcrumbs */
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #dadce0;
+            font-size: 13px;
+        }
+        
+        .breadcrumbs a {
+            color: #1967d2;
+            text-decoration: none;
+        }
+        
+        .breadcrumbs a:hover {
+            text-decoration: underline;
+        }
+        
+        .breadcrumbs .separator {
+            color: #dadce0;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 240px;
+                min-width: 240px;
+            }
+            
+            .panel {
+                width: 320px;
+                min-width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar - Lista Collezioni Root -->
+        <aside class="sidebar" id="main-sidebar">
+            <div class="sidebar-header">
+                <div>
+                    <h1>TinyDB Browser</h1>
+                        <div class="db-selector">
+                        <form action="{{ url_for('tinydb_browser.select_db') }}" method="POST">
+                            <select name="database" onchange="this.form.submit()">
+                                {% for db in databases %}
+                                <option value="{{ db }}" {% if db == current_db %}selected{% endif %}>{{ db }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <button class="sidebar-toggle-btn" onclick="toggleMainSidebar()" title="Collassa/Espandi sidebar">◀</button>
+            </div>
+            
+            <nav class="nav-section">
+                <div class="nav-section-title">Collezioni Root</div>
+                {% for table in tables %}
+                {% if '/' not in table %}
+                <a href="{{ url_for('tinydb_browser.browse', path=table) }}" class="nav-item {% if current_table == table and not doc_id %}active{% endif %}">
+                    <span class="nav-item-left">
+                        <span class="icon">📁</span>
+                        {{ table }}
+                    </span>
+                    <span class="arrow">›</span>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </nav>
+            
+            <!-- Split JSON Section - Posizionato in basso -->
+            <div class="split-section" style="margin-top: auto; padding: 16px 20px; border-top: 1px solid #dadce0; background-color: #f8f9fa;">
+                <div style="font-size: 11px; font-weight: 500; text-transform: uppercase; color: #5f6368; letter-spacing: 0.5px; margin-bottom: 8px;">
+                    Split JSON
+                </div>
+                <form action="{{ url_for('tinydb_browser.split_json') }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                    <select name="input_file" required style="padding: 8px 12px; font-size: 13px; border: 1px solid #dadce0; border-radius: 4px; background-color: #fff; color: #202124; cursor: pointer; width: 100%;">
+                        <option value="">Seleziona file JSON...</option>
+                        {% for db in databases %}
+                            {% if db.endswith('.json') %}
+                            <option value="{{ db }}">{{ db }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" style="padding: 8px 12px; font-size: 12px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                        ⚡ Split & Minify
+                    </button>
+                </form>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div style="margin-top: 8px;">
+                        {% for category, message in messages %}
+                            <div style="padding: 8px 12px; font-size: 12px; border-radius: 4px; {% if category == 'error' %}background: #fce8e8; color: #d93025;{% else %}background: #e6f4ea; color: #137333;{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </aside>
+        
+        <!-- Pannelli Contenuto -->
+        <div class="content-panels" style="flex-direction: column;">
+            {% if breadcrumb %}
+            <!-- Breadcrumb orizzontale fissa in cima (stile barra URL) -->
+            <div class="breadcrumb-bar" style="background: #f8f9fa; border-bottom: 1px solid #dadce0; padding: 8px 20px; font-size: 13px; flex-shrink: 0;">
+                <nav aria-label="breadcrumb" style="display: flex; align-items: center; gap: 6px; overflow-x: auto; white-space: nowrap;">
+                    {% for url, label in breadcrumb %}
+                        {% if url %}
+                            <a href="{{ url|fix_url }}" style="color: #1967d2; text-decoration: none;">{{ label }}</a>
+                        {% else %}
+                            <span style="font-weight: 600; color: #202124;">{{ label }}</span>
+                        {% endif %}
+                        {% if not loop.last %}
+                            <span style="color: #9aa0a6;">></span>
+                        {% endif %}
+                    {% endfor %}
+                </nav>
+            </div>
+            {% endif %}
+            
+            <!-- Container per i pannelli che scorrono -->
+            <div style="display: flex; flex: 1; overflow-x: auto;">
+                {% block panels %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleMainSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const btn = sidebar.querySelector('.sidebar-toggle-btn');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
+                sidebar.style.width = '280px';
+                sidebar.style.minWidth = '280px';
+                btn.innerHTML = '◀';
+                btn.title = 'Collassa sidebar';
+            } else {
+                sidebar.classList.add('collapsed');
+                sidebar.style.width = '60px';
+                sidebar.style.minWidth = '60px';
+                btn.innerHTML = '▶';
+                btn.title = 'Espandi sidebar';
+            }
+        }
+    </script>
+</body>
+</html>
