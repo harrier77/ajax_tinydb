@@ -180,7 +180,7 @@ def save_field():
         if not doc:
             return jsonify({'success': False, 'error': 'Document not found'}), 404
         
-        parts = field_path.split('.')
+        parts = field_path.split('|')
         current = doc
         for part in parts[:-1]:
             if part.isdigit():

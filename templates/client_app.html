@@ -532,20 +532,35 @@
         }
         
         function getNestedValue(obj, path) {
-            if (!path || path.length === 0) return obj;
+            // console.log('getNestedValue - INGRESSO:', { path, objKeys: Object.keys(obj) });
+            if (!path) return obj;
+            
+            const parts = path.split('|');
+            // console.log('getNestedValue - parts:', parts);
             let current = obj;
-            for (const part of path) {
+            for (const part of parts) {
+                // console.log('getNestedValue - cercando:', part, 'in current:', current ? Object.keys(current) : current);
                 if (current === null || current === undefined) return undefined;
-                if (typeof current === 'object') {
-                    current = current[part];
-                } else {
-                    return undefined;
-                }
+                current = current[part];
             }
+            // console.log('getNestedValue - TROVATO:', current);
             return current;
         }
         
         function setNestedValue(obj, path, value) {
+            if (!path || path.length === 0) return;
+            if (typeof path === 'string') {
+                const parts = path.split('|');
+                let current = obj;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (!(parts[i] in current)) {
+                        current[parts[i]] = {};
+                    }
+                    current = current[parts[i]];
+                }
+                current[parts[parts.length - 1]] = value;
+                return;
+            }
             if (path.length === 0) return;
             let current = obj;
             for (let i = 0; i < path.length - 1; i++) {
@@ -592,11 +607,13 @@
                 if (currentState.docId) {
                     html += `<span>></span><a onclick="navigateToDoc('${currentState.collection}', '${currentState.docId}')">${currentState.docId}</a>`;
                     
-                    if (currentState.fieldPath.length > 0) {
+                    if (currentState.fieldPath && currentState.fieldPath.length > 0) {
+                        const isStringPath = typeof currentState.fieldPath === 'string';
+                        const parts = isStringPath ? currentState.fieldPath.split('|') : currentState.fieldPath;
                         let pathStr = '';
-                        for (const part of currentState.fieldPath) {
-                            pathStr += '/' + part;
-                            html += `<span>></span><a onclick="navigateToField('${currentState.collection}', '${currentState.docId}', '${pathStr.substring(1)}')">${part}</a>`;
+                        for (const part of parts) {
+                            pathStr += (pathStr ? '|' : '') + part;
+                            html += `<span>></span><a onclick="navigateToField('${currentState.collection}', '${currentState.docId}', '${pathStr}')">${part}</a>`;
                         }
                     }
                 }
@@ -718,10 +735,14 @@
         }
         
         function renderFieldValue(collection, docId, fieldPath) {
+            // console.log('renderFieldValue - INGRESSO:', { collection, docId, fieldPath });
             const doc = getDoc(collection, docId);
+            // console.log('renderFieldValue - docKeys:', Object.keys(doc));
             const value = getNestedValue(doc, fieldPath);
-            const fieldName = fieldPath[fieldPath.length - 1];
-            const parentPath = fieldPath.slice(0, -1);
+            
+            const isStringPath = typeof fieldPath === 'string';
+            const fieldName = isStringPath ? fieldPath.split('|').pop() : fieldPath[fieldPath.length - 1];
+            const parentPath = isStringPath ? fieldPath.split('|').slice(0, -1).join('|') : fieldPath.slice(0, -1);
             const parentValue = getNestedValue(doc, parentPath);
             
             if (value === undefined) return '<div class="empty-state">Campo non trovato</div>';
@@ -731,10 +752,12 @@
                 <div class="panel-header">
                     <div>
                         <div class="panel-title">${fieldName}</div>
-                        <div class="panel-subtitle">${parentPath.join('.') || 'root'}</div>
+                        <div class="panel-subtitle">${parentPath || 'root'}</div>
                     </div>
                 </div>
                 <div class="panel-body">`;
+            
+            const pathParts = isStringPath ? fieldPath.split('|') : fieldPath;
             
             if (fieldType === 'array') {
                 html += `<div class="subcollections">
@@ -743,7 +766,7 @@
                 
                 value.forEach((item, idx) => {
                     const itemType = getFieldType(item);
-                    const fullPath = [...fieldPath, idx].join('.');
+                    const fullPath = isStringPath ? `${fieldPath}|${idx}` : [...fieldPath, idx].join('|');
                     
                     if (itemType === 'object') {
                         const title = getDocTitle(item);
@@ -778,7 +801,7 @@
                 
                 for (const [subFieldName, subFieldValue] of Object.entries(value)) {
                     const subFieldType = getFieldType(subFieldValue);
-                    const fullPath = [...fieldPath, subFieldName].join('.');
+                    const fullPath = isStringPath ? `${fieldPath}|${subFieldName}` : [...fieldPath, subFieldName].join('|');
                     
                     if (subFieldType === 'object' || subFieldType === 'array') {
                         const count = subFieldType === 'array' ? subFieldValue.length : Object.keys(subFieldValue).length;
@@ -810,9 +833,10 @@
                 
                 html += `</ul></div>`;
             } else {
+                const fieldPathStr = typeof fieldPath === 'string' ? fieldPath : fieldPath.join('|');
                 html += `<div class="field-group">
                     <div class="field-label">Valore</div>
-                    ${renderEditableField(collection, docId, fieldPath.join('.'), value)}
+                    ${renderEditableField(collection, docId, fieldPathStr, value)}
                 </div>`;
             }
             
@@ -889,8 +913,11 @@
         }
         
         function navigateToField(collection, docId, fieldPath) {
-            const path = fieldPath.split('.').filter(p => p);
+            // console.log('navigateToField - INGRESSO:', { collection, docId, fieldPath });
+            let path = fieldPath;
+            // console.log('navigateToField - path (USATO COSI COME E):', path);
             currentState = { collection, docId, fieldPath: path };
+            // console.log('navigateToField - currentState:', currentState);
             render();
         }
         
@@ -955,7 +982,7 @@
                     container.classList.remove('editing');
                     
                     const doc = getDoc(collection, docId);
-                    const pathParts = fieldPath.split('.');
+                    const pathParts = typeof fieldPath === 'string' ? fieldPath : fieldPath.join('|');
                     setNestedValue(doc, pathParts, newValue);
                     
                     setTimeout(() => { status.textContent = ''; }, 2000);
@@ -1072,7 +1099,7 @@
                     }
                     
                     const doc = getDoc(currentFullTextData.collection, currentFullTextData.docId);
-                    const pathParts = currentFullTextData.fieldPath.split('.');
+                    const pathParts = typeof currentFullTextData.fieldPath === 'string' ? currentFullTextData.fieldPath : currentFullTextData.fieldPath.join('|');
                     setNestedValue(doc, pathParts, value);
                     
                     setTimeout(() => {
