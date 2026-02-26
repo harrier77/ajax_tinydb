@@ -562,7 +562,24 @@
         }
         
         function getDocTitle(doc) {
-            return doc.nome || doc.id || doc._id || doc.title || Object.values(doc)[0] || '';
+            if (Array.isArray(doc)) {
+                if (doc.length > 0) {
+                    const firstItem = doc[0];
+                    if (typeof firstItem === 'object' && firstItem !== null) {
+                        return firstItem.nome || firstItem.id || firstItem._id || firstItem.title || `[Array di ${doc.length} oggetti]`;
+                    }
+                    return `[Array con ${doc.length} elementi semplici]`;
+                }
+                return '[Array vuoto]';
+            }
+            if (typeof doc !== 'object' || doc === null) {
+                return String(doc);
+            }
+            if (doc.nome) return doc.nome;
+            if (doc.id) return doc.id;
+            if (doc._id) return doc._id;
+            if (doc.title) return doc.title;
+            return `[Oggetto con ${Object.keys(doc).length} campi]`;
         }
         
         function renderBreadcrumb() {
@@ -818,7 +835,7 @@
                 <span class="field-value-display">${value}</span>
                 <input type="text" class="field-value-input" value="${value}">
                 <button class="btn-edit" onclick="startEdit(this)" title="Modifica">✏️</button>
-                <button class="btn-expand" onclick="openFullTextPanel('${collection}', '${docId}', '${fieldPath}', '${value}')" title="Modifica in finestra">📝</button>
+                <button class="btn-expand" onclick="openFullTextPanel(this)" title="Modifica in finestra">📝</button>
                 <button class="btn-save" onclick="saveEdit(this)">💾</button>
                 <button class="btn-cancel" onclick="cancelEdit(this)">❌</button>
                 <span class="save-status"></span>
@@ -957,7 +974,13 @@
         let dragOffsetX = 0;
         let dragOffsetY = 0;
         
-        function openFullTextPanel(collection, docId, fieldPath, value) {
+        function openFullTextPanel(btn) {
+            const container = btn.closest('.field-editable');
+            const collection = container.dataset.collection;
+            const docId = container.dataset.docId;
+            const fieldPath = container.dataset.fieldPath;
+            const value = container.querySelector('.field-value-display').textContent;
+            
             currentFullTextData = { collection, docId, fieldPath };
             
             const panel = document.getElementById('full-text-panel');
@@ -974,6 +997,25 @@
             panel.style.left = '';
             panel.style.right = '2.5vw';
             panel.classList.add('active');
+            
+            const lineHeight = 21;
+            const padding = 24;
+            const textareaScrollHeight = textarea.scrollHeight;
+            const calculatedHeight = Math.max(150, textareaScrollHeight + padding);
+            
+            textarea.style.height = 'auto';
+            textarea.style.height = (textareaScrollHeight + padding) + 'px';
+            
+            const panelBody = panel.querySelector('.full-text-body');
+            const panelFooter = panel.querySelector('.full-text-footer');
+            const headerHeight = panel.querySelector('.full-text-header').offsetHeight;
+            const footerHeight = panelFooter.offsetHeight;
+            const maxPanelHeight = window.innerHeight * 0.85;
+            let newPanelHeight = headerHeight + textareaScrollHeight + padding + footerHeight + 20;
+            newPanelHeight = Math.min(newPanelHeight, maxPanelHeight);
+            
+            panel.style.height = newPanelHeight + 'px';
+            
             textarea.focus();
         }
         
@@ -1087,6 +1129,26 @@
         });
         
         document.addEventListener('DOMContentLoaded', render);
+        
+        document.getElementById('full-text-value').addEventListener('input', function() {
+            const textarea = this;
+            const panel = document.getElementById('full-text-panel');
+            const panelBody = panel.querySelector('.full-text-body');
+            const panelFooter = panel.querySelector('.full-text-footer');
+            const headerHeight = panel.querySelector('.full-text-header').offsetHeight;
+            const footerHeight = panelFooter.offsetHeight;
+            const maxPanelHeight = window.innerHeight * 0.85;
+            const padding = 24;
+            
+            textarea.style.height = 'auto';
+            const textareaScrollHeight = textarea.scrollHeight;
+            textarea.style.height = (textareaScrollHeight + padding) + 'px';
+            
+            let newPanelHeight = headerHeight + textareaScrollHeight + padding + footerHeight + 20;
+            newPanelHeight = Math.min(newPanelHeight, maxPanelHeight);
+            
+            panel.style.height = newPanelHeight + 'px';
+        });
     </script>
 </body>
 </html>
