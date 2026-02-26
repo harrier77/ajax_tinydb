@@ -77,9 +77,16 @@
         
         .content-panels {
             display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: auto;
+            background-color: #f8f9fa;
+        }
+        
+        .panels-row {
+            display: flex;
             flex: 1;
             overflow-x: auto;
-            background-color: #f8f9fa;
         }
         
         .panel {
@@ -117,6 +124,7 @@
             padding: 16px 20px;
             text-decoration: none;
             color: inherit;
+            cursor: pointer;
         }
         
         .doc-header-inline { display: flex; align-items: center; gap: 8px; }
@@ -168,7 +176,7 @@
         .field-editable.editing .field-value-display { display: none; }
         .field-editable.editing .field-value-input { display: inline-block; }
         
-        .field-editable .btn-edit, .field-editable .btn-save, .field-editable .btn-cancel {
+        .field-editable .btn-edit, .field-editable .btn-save, .field-editable .btn-cancel, .field-editable .btn-expand {
             background: none;
             border: none;
             cursor: pointer;
@@ -176,6 +184,19 @@
             padding: 2px 4px;
             border-radius: 4px;
             opacity: 0.6;
+        }
+        
+        .field-editable .btn-expand {
+            color: #1967d2;
+        }
+        
+        .field-editable.editing .btn-expand {
+            display: none;
+        }
+        
+        .field-editable .btn-edit:hover, .field-editable:hover .btn-edit,
+        .field-editable .btn-expand:hover, .field-editable:hover .btn-expand {
+            opacity: 1;
         }
         
         .field-editable .btn-save, .field-editable .btn-cancel { display: none; }
@@ -237,6 +258,158 @@
         .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
         
         .loading { text-align: center; padding: 40px; color: #5f6368; }
+        
+        .full-text-panel {
+            position: fixed;
+            top: 5vh;
+            right: 2.5vw;
+            width: 30vw;
+            max-width: 70vw;
+            height: 40vh;
+            background: white;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            transform: translateX(110%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: auto;
+            resize: both;
+            min-width: 30vw;
+            min-height: 35vh;
+        }
+        
+        .full-text-panel.active {
+            display: flex;
+            transform: translateX(0);
+        }
+        
+        .full-text-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .full-text-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #dadce0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            flex-shrink: 0;
+            cursor: move;
+            user-select: none;
+        }
+        
+        .full-text-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #202124;
+        }
+        
+        .full-text-field-name {
+            font-size: 12px;
+            color: #5f6368;
+            margin-top: 4px;
+        }
+        
+        .full-text-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #5f6368;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        
+        .full-text-close:hover {
+            background-color: #f1f3f4;
+            color: #202124;
+        }
+        
+        .full-text-body {
+            flex: 1;
+            padding: 16px 20px;
+            overflow: auto;
+        }
+        
+        .full-text-value {
+            width: 100%;
+            height: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            resize: none;
+            line-height: 1.5;
+        }
+        
+        .full-text-value:focus {
+            outline: none;
+            border-color: #4285f4;
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+        
+        .full-text-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #dadce0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            flex-shrink: 0;
+        }
+        
+        .full-text-status {
+            font-size: 13px;
+            color: #5f6368;
+        }
+        
+        .full-text-status.success {
+            color: #34a853;
+        }
+        
+        .full-text-status.error {
+            color: #ea4335;
+        }
+        
+        .full-text-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .full-text-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .full-text-btn-cancel {
+            background: white;
+            border: 1px solid #dadce0;
+            color: #5f6368;
+        }
+        
+        .full-text-btn-cancel:hover {
+            background: #f1f3f4;
+        }
+        
+        .full-text-btn-save {
+            background: #1967d2;
+            border: none;
+            color: white;
+        }
+        
+        .full-text-btn-save:hover {
+            background: #1557b0;
+        }
     </style>
 </head>
 <body>
@@ -251,8 +424,30 @@
             </nav>
         </aside>
         
-        <div class="content-panels" id="content-panels">
+    <div class="content-panels" id="content-panels">
             <div class="loading">Caricamento dati...</div>
+        </div>
+        
+        <div id="full-text-panel" class="full-text-panel">
+            <div class="full-text-content">
+                <div class="full-text-header">
+                    <div>
+                        <div class="full-text-title">Modifica campo</div>
+                        <div class="full-text-field-name" id="full-text-field-name"></div>
+                    </div>
+                    <button class="full-text-close" onclick="closeFullTextPanel()">&times;</button>
+                </div>
+                <div class="full-text-body">
+                    <textarea id="full-text-value" class="full-text-value" placeholder="Inserisci il testo..."></textarea>
+                </div>
+                <div class="full-text-footer">
+                    <span id="full-text-status" class="full-text-status"></span>
+                    <div class="full-text-actions">
+                        <button class="full-text-btn full-text-btn-cancel" onclick="closeFullTextPanel()">Annulla</button>
+                        <button class="full-text-btn full-text-btn-save" onclick="saveFullText()">Salva</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -565,6 +760,7 @@
                 <span class="field-value-display">${value}</span>
                 <input type="text" class="field-value-input" value="${value}">
                 <button class="btn-edit" onclick="startEdit(this)" title="Modifica">✏️</button>
+                <button class="btn-expand" onclick="openFullTextPanel('${collection}', '${docId}', '${fieldPath}', '${value}')" title="Modifica in finestra">📝</button>
                 <button class="btn-save" onclick="saveEdit(this)">💾</button>
                 <button class="btn-cancel" onclick="cancelEdit(this)">❌</button>
                 <span class="save-status"></span>
@@ -576,6 +772,7 @@
             
             const panels = document.getElementById('content-panels');
             let html = renderBreadcrumb();
+            html += '<div class="panels-row">';
             
             if (currentState.collection) {
                 html += renderDocumentsList(currentState.collection);
@@ -595,6 +792,7 @@
                 </div>`;
             }
             
+            html += '</div>';
             panels.innerHTML = html;
         }
         
@@ -609,7 +807,7 @@
         }
         
         function navigateToField(collection, docId, fieldPath) {
-            const path = fieldPath.split('/').filter(p => p);
+            const path = fieldPath.split('.').filter(p => p);
             currentState = { collection, docId, fieldPath: path };
             render();
         }
@@ -688,6 +886,140 @@
                 status.className = 'save-status error';
             }
         }
+        
+        let currentFullTextData = null;
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        
+        function openFullTextPanel(collection, docId, fieldPath, value) {
+            currentFullTextData = { collection, docId, fieldPath };
+            
+            const panel = document.getElementById('full-text-panel');
+            const fieldNameEl = document.getElementById('full-text-field-name');
+            const textarea = document.getElementById('full-text-value');
+            const status = document.getElementById('full-text-status');
+            
+            fieldNameEl.textContent = fieldPath;
+            textarea.value = value;
+            status.textContent = '';
+            status.className = 'full-text-status';
+            
+            panel.style.top = '5vh';
+            panel.style.left = '';
+            panel.style.right = '2.5vw';
+            panel.classList.add('active');
+            textarea.focus();
+        }
+        
+        function closeFullTextPanel() {
+            const panel = document.getElementById('full-text-panel');
+            panel.classList.remove('active');
+            currentFullTextData = null;
+        }
+        
+        async function saveFullText() {
+            if (!currentFullTextData) return;
+            
+            const textarea = document.getElementById('full-text-value');
+            const status = document.getElementById('full-text-status');
+            const value = textarea.value;
+            
+            textarea.disabled = true;
+            status.textContent = 'Salvataggio...';
+            status.className = 'full-text-status';
+            
+            try {
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        collection: currentFullTextData.collection,
+                        doc_id: currentFullTextData.docId,
+                        field_path: currentFullTextData.fieldPath,
+                        value: value
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.textContent = 'Salvato!';
+                    status.className = 'full-text-status success';
+                    
+                    const allEditors = document.querySelectorAll('.field-editable');
+                    for (const editor of allEditors) {
+                        if (editor.dataset.fieldPath === currentFullTextData.fieldPath &&
+                            editor.dataset.docId === currentFullTextData.docId &&
+                            editor.dataset.collection === currentFullTextData.collection) {
+                            const display = editor.querySelector('.field-value-display');
+                            if (display) {
+                                display.textContent = value;
+                            }
+                            const input = editor.querySelector('.field-value-input');
+                            if (input) {
+                                input.value = value;
+                            }
+                            break;
+                        }
+                    }
+                    
+                    const doc = getDoc(currentFullTextData.collection, currentFullTextData.docId);
+                    const pathParts = currentFullTextData.fieldPath.split('.');
+                    setNestedValue(doc, pathParts, value);
+                    
+                    setTimeout(() => {
+                        closeFullTextPanel();
+                        textarea.disabled = false;
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Errore sconosciuto');
+                }
+            } catch (e) {
+                status.textContent = 'Errore: ' + e.message;
+                status.className = 'full-text-status error';
+                textarea.disabled = false;
+            }
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('full-text-panel').classList.contains('active')) {
+                closeFullTextPanel();
+            }
+            if (e.key === 'Enter' && e.ctrlKey && document.getElementById('full-text-panel').classList.contains('active')) {
+                saveFullText();
+            }
+        });
+        
+        document.querySelector('.full-text-header').addEventListener('mousedown', function(e) {
+            const panel = document.getElementById('full-text-panel');
+            if (!panel.classList.contains('active')) return;
+            
+            isDragging = true;
+            const rect = panel.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            
+            panel.style.transition = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const panel = document.getElementById('full-text-panel');
+            panel.style.left = (e.clientX - dragOffsetX) + 'px';
+            panel.style.right = 'auto';
+            panel.style.top = (e.clientY - dragOffsetY) + 'px';
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                const panel = document.getElementById('full-text-panel');
+                panel.style.transition = '';
+            }
+        });
         
         document.addEventListener('DOMContentLoaded', render);
     </script>
