@@ -34,12 +34,58 @@
             padding: 20px;
             border-bottom: 1px solid #dadce0;
             background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
         
         .sidebar-header h1 {
             font-size: 20px;
             font-weight: 500;
             color: #5f6368;
+        }
+        
+        .db-selector {
+            margin-top: 8px;
+        }
+        
+        .db-selector select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        
+        .db-selector select:hover {
+            border-color: #1967d2;
+        }
+        
+        .sidebar-toggle-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #5f6368;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .sidebar-toggle-btn:hover {
+            background-color: #f1f3f4;
+        }
+        
+        .sidebar.collapsed {
+            width: 50px;
+            min-width: 50px;
+        }
+        
+        .sidebar.collapsed .sidebar-header h1,
+        .sidebar.collapsed .db-selector,
+        .sidebar.collapsed .nav-section {
+            display: none;
         }
         
         .nav-section {
@@ -414,9 +460,21 @@
 </head>
 <body>
     <div class="app-container">
-        <aside class="sidebar">
+        <aside class="sidebar" id="main-sidebar">
             <div class="sidebar-header">
-                <h1>JSON Browser</h1>
+                <div>
+                    <h1>TinyDB Browser</h1>
+                    <div class="db-selector">
+                        <form action="/select-db" method="POST">
+                            <select name="database" onchange="this.form.submit()">
+                                {% for db in databases %}
+                                <option value="{{ db }}" {% if db == current_db %}selected{% endif %}>{{ db }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <button class="sidebar-toggle-btn" onclick="toggleMainSidebar()" title="Collassa/Espandi sidebar">◀</button>
             </div>
             <nav class="nav-section">
                 <div class="nav-section-title">Collections</div>
@@ -607,9 +665,9 @@
                         <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fieldName}')">
                             <div class="doc-header-inline">
                                 <span class="doc-icon">${icon}</span>
-                                <span class="doc-title-inline">${fieldName}</span>
+                                <span class="doc-title-inline" style="font-weight: 700; color: #202124;">${fieldName}</span>
                             </div>
-                            <div class="doc-preview">${label}</div>
+                            <div class="doc-preview" style="font-weight: 600; color: #d32f2f;">${label}</div>
                         </a>
                     </li>`;
                 } else {
@@ -713,9 +771,9 @@
                             <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fullPath}')">
                                 <div class="doc-header-inline">
                                     <span class="doc-icon">${icon}</span>
-                                    <span class="doc-title-inline">${subFieldName}</span>
+                                    <span class="doc-title-inline" style="font-weight: 700; color: #202124;">${subFieldName}</span>
                                 </div>
-                                <div class="doc-preview">${label}</div>
+                                <div class="doc-preview" style="font-weight: 600; color: #d32f2f;">${label}</div>
                             </a>
                         </li>`;
                     } else {
@@ -799,6 +857,13 @@
         function navigateToCollection(collection) {
             currentState = { collection, docId: null, fieldPath: [] };
             render();
+        }
+        
+        function toggleMainSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const btn = sidebar.querySelector('.sidebar-toggle-btn');
+            sidebar.classList.toggle('collapsed');
+            btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
         }
         
         function navigateToDoc(collection, docId) {

@@ -1,7 +1,7 @@
 {
   "Disneyland": {
     "1": {
-      "nome": "Test Name",
+      "nome": "Strada principale",
       "tipo": "area",
       "descrizione": "La via principale della America di fine 800",
       "attrazioni_principali": [
@@ -41,7 +41,7 @@
           "occupazione": "Disoccupato oppure sottoccupato",
           "prima_apparizione": "1934",
           "alleati": [
-            "Paperinax",
+            "Paperina",
             "Qui Quo Qua",
             "Paperone"
           ],
