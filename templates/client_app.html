@@ -319,8 +319,46 @@
         .breadcrumb-bar a { color: #1967d2; text-decoration: none; cursor: pointer; }
         .breadcrumb-bar a:hover { text-decoration: underline; }
         .breadcrumb-bar span { color: #9aa0a6; }
-        .breadcrumb-bar strong { color: #202124; }
-        
+.breadcrumb-bar strong { color: #202124; }
+
+        .pagination-bar {
+            background: #fff;
+            border-bottom: 1px solid #dadce0;
+            padding: 8px 20px;
+            font-size: 13px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pagination-bar .page-num {
+            display: inline-block;
+            min-width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #5f6368;
+            transition: all 0.2s;
+        }
+
+        .pagination-bar .page-num:hover {
+            background-color: #f1f3f4;
+            color: #1967d2;
+        }
+
+        .pagination-bar .page-num.active {
+            background-color: #1967d2;
+            color: white;
+        }
+
+        .pagination-bar .page-ellipsis {
+            padding: 0 4px;
+            color: #5f6368;
+        }
+
         .empty-state { text-align: center; padding: 64px 20px; color: #5f6368; }
         .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
         
@@ -537,7 +575,8 @@
             collection: null,
             docId: null,
             fieldPath: [],
-            pagination: {}
+            pagination: {},
+            currentPage: 1
         };
         
         const PAGE_SIZE = 10;
@@ -640,7 +679,7 @@
             return `[Oggetto con ${Object.keys(doc).length} campi]`;
         }
         
-        function renderBreadcrumb() {
+function renderBreadcrumb() {
             let html = '<div class="breadcrumb-bar">';
             html += `<a onclick="navigateToCollection(null)">Home</a>`;
             
@@ -663,6 +702,36 @@
             }
             html += '</div>';
             return html;
+        }
+
+function renderPaginationBar() {
+            if (!currentState.collection || currentState.docId) return '';
+
+            const col = getCollection(currentState.collection);
+            const docIds = Object.keys(col);
+            const totalDocs = docIds.length;
+
+            if (totalDocs <= PAGE_SIZE) return '';
+
+            const totalPages = Math.ceil(totalDocs / PAGE_SIZE);
+            const activePage = currentState.currentPage || 1;
+            let html = '<div class="pagination-bar">';
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= 2 && i <= 4) || (i >= totalPages - 3 && i <= totalPages - 1)) {
+                    html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
+                } else if (i === 5 || i === totalPages - 4) {
+                    html += `<span class="page-ellipsis">...</span>`;
+                }
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function goToPage(pageNum) {
+            currentState.currentPage = pageNum;
+            render();
         }
         
         function renderCollectionsList() {
@@ -687,22 +756,25 @@
             const col = getCollection(collection);
             console.log('DEBUG renderDocumentsList - col (getCollection result):', col);
             const docIds = Object.keys(col);
-            const pag = getPaginationState(collection);
-            const displayedCount = Math.min(pag.displayed, docIds.length);
-            const hasMore = pag.displayed < docIds.length;
+            const totalDocs = docIds.length;
+            const totalPages = Math.ceil(totalDocs / PAGE_SIZE);
+            const currentPage = currentState.currentPage || 1;
+            
+            const startIdx = (currentPage - 1) * PAGE_SIZE;
+            const endIdx = Math.min(startIdx + PAGE_SIZE, totalDocs);
+            const pageDocIds = docIds.slice(startIdx, endIdx);
             
             let html = `<div class="panel">
                 <div class="panel-header">
                     <div>
                         <div class="panel-title">${collection}</div>
-                        <div class="panel-subtitle">${docIds.length} documenti (mostrati ${displayedCount})</div>
+                        <div class="panel-subtitle">${totalDocs} documenti (pagina ${currentPage} di ${totalPages})</div>
                     </div>
                 </div>
                 <div class="panel-body">
                     <ul class="doc-list">`;
             
-            for (let i = 0; i < displayedCount; i++) {
-                const docId = docIds[i];
+            for (const docId of pageDocIds) {
                 const doc = col[docId];
                 const title = getDocTitle(doc);
                 const isActive = currentState.docId === docId;
@@ -718,17 +790,7 @@
                 </li>`;
             }
             
-            html += `</ul>`;
-            
-            if (hasMore) {
-                html += `<div class="load-more-container">
-                    <button class="btn-load-more" onclick="loadMoreDocs('${collection}')">
-                        Carica altri (${docIds.length - displayedCount} rimanenti)
-                    </button>
-                </div>`;
-            }
-            
-            html += `</div></div>`;
+            html += `</ul></div></div>`;
             return html;
         }
         
@@ -927,11 +989,12 @@
             </div>`;
         }
         
-        function render() {
+function render() {
             document.getElementById('collections-list').innerHTML = renderCollectionsList();
             
             const panels = document.getElementById('content-panels');
             let html = renderBreadcrumb();
+            html += renderPaginationBar();
             html += '<div class="panels-row">';
             
             if (currentState.collection) {
@@ -957,12 +1020,7 @@
         }
         
         function navigateToCollection(collection) {
-            if (currentState.collection !== collection) {
-                if (collection && currentState.pagination[collection]) {
-                    currentState.pagination[collection].displayed = PAGE_SIZE;
-                }
-            }
-            currentState = { collection, docId: null, fieldPath: [], pagination: currentState.pagination };
+            currentState = { collection, docId: null, fieldPath: [], pagination: currentState.pagination, currentPage: 1 };
             render();
         }
         
@@ -977,7 +1035,7 @@
             console.log('DEBUG navigateToDoc - collection:', collection, 'docId:', docId);
             console.log('DEBUG navigateToDoc - dbData:', dbData);
             console.log('DEBUG navigateToDoc - dbData[collection]:', dbData[collection]);
-            currentState = { collection, docId, fieldPath: [], pagination: currentState.pagination };
+            currentState = { collection, docId, fieldPath: [], pagination: currentState.pagination, currentPage: currentState.currentPage };
             render();
         }
         
@@ -985,7 +1043,7 @@
             // console.log('navigateToField - INGRESSO:', { collection, docId, fieldPath });
             let path = fieldPath;
             // console.log('navigateToField - path (USATO COSI COME E):', path);
-            currentState = { collection, docId, fieldPath: path, pagination: currentState.pagination };
+            currentState = { collection, docId, fieldPath: path, pagination: currentState.pagination, currentPage: currentState.currentPage };
             // console.log('navigateToField - currentState:', currentState);
             render();
         }

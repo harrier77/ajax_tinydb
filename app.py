@@ -27,6 +27,8 @@ def load_json():
                     pointer_path = target
                 else:
                     pointer_path = os.path.abspath(os.path.join(PROJECT_DIR, target))
+                    if not os.path.exists(pointer_path):
+                        pointer_path = os.path.abspath(os.path.join(DATA_DIR, target))
                 if os.path.isfile(pointer_path):
                     with open(pointer_path, 'r', encoding='utf-8') as f:
                         return json.load(f)
