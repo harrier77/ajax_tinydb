@@ -21,9 +21,12 @@ def load_json():
             data = json.load(f)
         
         if isinstance(data, dict) and data.get('_db_pointer'):
-            target = data.get('target')
+            target = data.get('target') or data.get('path')
             if target:
-                pointer_path = os.path.join(DATA_DIR, target)
+                if os.path.isabs(target):
+                    pointer_path = target
+                else:
+                    pointer_path = os.path.abspath(os.path.join(PROJECT_DIR, target))
                 if os.path.isfile(pointer_path):
                     with open(pointer_path, 'r', encoding='utf-8') as f:
                         return json.load(f)
