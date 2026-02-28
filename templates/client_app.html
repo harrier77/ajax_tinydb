@@ -571,9 +571,6 @@
     <script>
         const dbData = {{ data|tojson|safe }};
         
-        console.log('dbData:', dbData);
-        console.log('dbData keys:', Object.keys(dbData));
-        
         let currentState = {
             collection: null,
             docId: null,
@@ -585,9 +582,7 @@
         const PAGE_SIZE = 10;
         
         function getPaginationState(collection) {
-            console.log('DEBUG getPaginationState - collection:', collection);
-            console.log('DEBUG getPaginationState - currentState.pagination:', currentState.pagination);
-            console.log('DEBUG getPaginationState - dbData keys:', Object.keys(dbData));
+
             if (!currentState.pagination) {
                 currentState.pagination = {};
             }
@@ -663,8 +658,11 @@
         
         const labelFields = {{ config.labelFields|tojson|safe }};
         
-        function getDocTitle(doc) {
+        function getDocTitle(doc, checkArrayElements = false) {
             if (Array.isArray(doc)) {
+                if (!checkArrayElements) {
+                    return `[Array con ${doc.length} elementi]`;
+                }
                 if (doc.length > 0) {
                     const firstItem = doc[0];
                     if (typeof firstItem === 'object' && firstItem !== null) {
@@ -788,10 +786,7 @@ function renderPaginationBar() {
         }
         
         function renderDocumentsList(collection) {
-            console.log('DEBUG renderDocumentsList - collection:', collection);
-            console.log('DEBUG renderDocumentsList - dbData keys:', Object.keys(dbData));
             const col = getCollection(collection);
-            console.log('DEBUG renderDocumentsList - col (getCollection result):', col);
             const docIds = Object.keys(col);
             const totalDocs = docIds.length;
             const totalPages = Math.ceil(totalDocs / PAGE_SIZE);
@@ -850,6 +845,7 @@ function renderPaginationBar() {
             
             for (const [fieldName, fieldValue] of Object.entries(doc)) {
                 const fieldType = getFieldType(fieldValue);
+                const fieldLabel = fieldType === 'object' ? getDocTitle(fieldValue, true) : fieldName;
                 
                 if (fieldType === 'object' || fieldType === 'array') {
                     const count = fieldType === 'array' ? fieldValue.length : Object.keys(fieldValue).length;
@@ -859,7 +855,7 @@ function renderPaginationBar() {
                         <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fieldName}')">
                             <div class="doc-header-inline">
                                 <span class="doc-icon">${icon}</span>
-                                <span class="doc-title-inline" style="font-weight: 700; color: #202124;">${fieldName}</span>
+                                <span class="doc-title-inline" style="font-weight: 700; color: #202124;">${fieldLabel}</span>
                             </div>
                             <div class="doc-preview" style="font-weight: 600; color: #d32f2f;">${label}</div>
                         </a>
@@ -869,7 +865,7 @@ function renderPaginationBar() {
                         <div class="doc-link" style="cursor: default;">
                             <div class="doc-header-inline">
                                 <span class="doc-icon">📄</span>
-                                <span class="doc-title-inline">${fieldName}</span>
+                                <span class="doc-title-inline">${fieldLabel}</span>
                             </div>
                             <div class="doc-preview">
                                 ${renderEditableField(collection, docId, fieldName, fieldValue)}
@@ -924,12 +920,14 @@ function renderPaginationBar() {
                     <div class="field-label">Elementi (${value.length})</div>
                     <ul class="doc-list">`;
                 
+                console.log('DEBUG array elements - fieldPath:', fieldPath, '- items:', value);
+                
                 value.forEach((item, idx) => {
                     const itemType = getFieldType(item);
                     const fullPath = isStringPath ? `${fieldPath}|${idx}` : [...fieldPath, idx].join('|');
                     
                     if (itemType === 'object') {
-                        const title = getDocTitle(item);
+                        const title = getDocTitle(item, true);
                         html += `<li class="doc-item">
                             <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fullPath}')">
                                 <div class="doc-header-inline">
@@ -1027,8 +1025,7 @@ function renderPaginationBar() {
         }
         
 function render() {
-            console.log('RENDER - currentState:', currentState);
-            console.log('RENDER - collections:', Object.keys(dbData));
+
             document.getElementById('collections-list').innerHTML = renderCollectionsList();
             
             const panels = document.getElementById('content-panels');
@@ -1071,9 +1068,6 @@ function render() {
         }
         
         function navigateToDoc(collection, docId) {
-            console.log('DEBUG navigateToDoc - collection:', collection, 'docId:', docId);
-            console.log('DEBUG navigateToDoc - dbData:', dbData);
-            console.log('DEBUG navigateToDoc - dbData[collection]:', dbData[collection]);
             currentState = { collection, docId, fieldPath: [], pagination: currentState.pagination, currentPage: currentState.currentPage };
             render();
         }
