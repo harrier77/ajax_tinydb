@@ -933,10 +933,11 @@ function renderPaginationBar() {
                         html += `<li class="doc-item">
                             <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fullPath}')">
                                 <div class="doc-header-inline">
+                                    <span class="doc-icon">📋</span>
                                     <span class="doc-id-inline">#${idx}</span>
                                     <span class="doc-title-inline">${title}</span>
                                 </div>
-                                <div class="doc-preview">Oggetto con ${Object.keys(item).length} campi</div>
+                                <div class="doc-preview" style="font-weight: 600; color: #d32f2f;">Elemento #${idx}</div>
                             </a>
                         </li>`;
                     } else {
