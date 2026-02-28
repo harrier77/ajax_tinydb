@@ -571,6 +571,9 @@
     <script>
         const dbData = {{ data|tojson|safe }};
         
+        console.log('dbData:', dbData);
+        console.log('dbData keys:', Object.keys(dbData));
+        
         let currentState = {
             collection: null,
             docId: null,
@@ -658,12 +661,17 @@
             return 'simple';
         }
         
+        const labelFields = {{ config.labelFields|tojson|safe }};
+        
         function getDocTitle(doc) {
             if (Array.isArray(doc)) {
                 if (doc.length > 0) {
                     const firstItem = doc[0];
                     if (typeof firstItem === 'object' && firstItem !== null) {
-                        return firstItem.nome || firstItem.id || firstItem._id || firstItem.title || `[Array di ${doc.length} oggetti]`;
+                        for (const field of labelFields) {
+                            if (firstItem[field]) return firstItem[field];
+                        }
+                        return `[Array di ${doc.length} oggetti]`;
                     }
                     return `[Array con ${doc.length} elementi semplici]`;
                 }
@@ -672,10 +680,9 @@
             if (typeof doc !== 'object' || doc === null) {
                 return String(doc);
             }
-            if (doc.nome) return doc.nome;
-            if (doc.id) return doc.id;
-            if (doc._id) return doc._id;
-            if (doc.title) return doc.title;
+            for (const field of labelFields) {
+                if (doc[field]) return doc[field];
+            }
             return `[Oggetto con ${Object.keys(doc).length} campi]`;
         }
         
@@ -717,12 +724,42 @@ function renderPaginationBar() {
             const activePage = currentState.currentPage || 1;
             let html = '<div class="pagination-bar">';
 
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= 2 && i <= 4) || (i >= totalPages - 3 && i <= totalPages - 1)) {
-                    html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
-                } else if (i === 5 || i === totalPages - 4) {
-                    html += `<span class="page-ellipsis">...</span>`;
+            const maxWindow = 7;
+            let start = 1;
+            let end = totalPages;
+
+            if (totalPages > maxWindow) {
+                if (activePage <= 5) {
+                    start = 1;
+                    end = maxWindow;
+                } else if (activePage >= totalPages - 4) {
+                    start = totalPages - maxWindow + 1;
+                    end = totalPages;
+                } else {
+                    start = activePage - 2;
+                    end = activePage + 2;
                 }
+            }
+
+            let firstPartEnd = Math.min(4, totalPages);
+            for (let i = 1; i <= firstPartEnd; i++) {
+                html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
+            }
+
+            if (start > 5) {
+                html += `<span class="page-ellipsis">...</span>`;
+            }
+
+            for (let i = Math.max(5, start); i <= Math.min(totalPages - 4, end); i++) {
+                html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
+            }
+
+            if (end < totalPages - 4) {
+                html += `<span class="page-ellipsis">...</span>`;
+            }
+
+            for (let i = Math.max(totalPages - 3, Math.max(end + 1, 5)); i <= totalPages; i++) {
+                html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
             }
 
             html += '</div>';
@@ -990,6 +1027,8 @@ function renderPaginationBar() {
         }
         
 function render() {
+            console.log('RENDER - currentState:', currentState);
+            console.log('RENDER - collections:', Object.keys(dbData));
             document.getElementById('collections-list').innerHTML = renderCollectionsList();
             
             const panels = document.getElementById('content-panels');
@@ -1282,7 +1321,13 @@ function render() {
             }
         });
         
-        document.addEventListener('DOMContentLoaded', render);
+        document.addEventListener('DOMContentLoaded', function() {
+            const collections = Object.keys(dbData);
+            if (collections.length > 0) {
+                currentState.collection = collections[0];
+            }
+            render();
+        });
         
         document.getElementById('full-text-value').addEventListener('input', function() {
             const textarea = this;

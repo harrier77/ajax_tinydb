@@ -7,8 +7,15 @@ app = Flask(__name__)
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 JSON_FILE = os.path.join(DATA_DIR, 'database.json')
+CONFIG_FILE = os.path.join(PROJECT_DIR, 'config', 'config.json')
 
 CURRENT_DB = 'database.json'
+
+def load_config():
+    if os.path.isfile(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
 
 def get_json_path():
     return os.path.join(DATA_DIR, CURRENT_DB)
@@ -156,7 +163,8 @@ def save_json(data):
 def index():
     data = load_json()
     databases = get_databases()
-    return render_template('client_app.html', data=data, databases=databases, current_db=CURRENT_DB)
+    config = load_config()
+    return render_template('client_app.html', data=data, databases=databases, current_db=CURRENT_DB, config=config)
 
 @app.route('/select-db', methods=['POST'])
 def select_db():
@@ -165,7 +173,8 @@ def select_db():
     if database:
         CURRENT_DB = database
     databases = get_databases()
-    return render_template('client_app.html', data=load_json(), databases=databases, current_db=CURRENT_DB)
+    config = load_config()
+    return render_template('client_app.html', data=load_json(), databases=databases, current_db=CURRENT_DB, config=config)
 
 @app.route('/api/save', methods=['POST'])
 def save_field():
