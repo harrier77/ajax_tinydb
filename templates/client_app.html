@@ -571,6 +571,7 @@
     <script>
         const dbData = {{ data|tojson|safe }};
         
+
         let currentState = {
             collection: null,
             docId: null,
@@ -599,7 +600,8 @@
         }
         
         function getCollectionKeys() {
-            return Object.keys(dbData);
+            const keys = Object.keys(dbData);
+            return keys;
         }
         
         function getCollection(name) {

@@ -68,6 +68,11 @@ def load_json():
                     if subdir:
                         pointer_path = os.path.join(pointer_path, subdir)
                 return load_directory(pointer_path)
+        
+        if isinstance(data, list):
+            collection_name = os.path.splitext(CURRENT_DB)[0]
+            return {collection_name: {str(i): item for i, item in enumerate(data)}}
+        
         return data
     
     elif os.path.isdir(path):
@@ -88,7 +93,11 @@ def load_directory(dir_path):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 doc_id = filename[:-5]
-                result[dir_name][doc_id] = data
+                if isinstance(data, list):
+                    for idx, item in enumerate(data):
+                        result[dir_name][f"{doc_id}_{idx}"] = item
+                else:
+                    result[dir_name][doc_id] = data
             except:
                 pass
     return result
