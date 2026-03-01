@@ -515,6 +515,20 @@
         .full-text-btn-save:hover {
             background: #1557b0;
         }
+		
+		.page-jump {
+			margin-left: 0px;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.page-jump input {
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			padding: 4px;
+		}
+		
     </style>
 </head>
 <body>
@@ -767,7 +781,17 @@ function renderPaginationBar() {
         html += `
             <span class="page-num" onclick="goToPage(${totalPages})">${totalPages}</span>`;
     }
-
+	
+	html += `
+        <span class="page-jump">
+            <input type="number" 
+                   min="1" max="${totalPages}" 
+                   value="${currentPage}" 
+                   style="width: 3.5em; text-align: center; margin: 0 4px;"
+                   onkeydown="if(event.key==='Enter'){let v=parseInt(this.value,10); 
+                             if(v>=1&&v<=${totalPages})goToPage(v)}">
+        </span>`;
+	
     html += '</div>';
 
     return html;
