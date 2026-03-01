@@ -712,59 +712,66 @@ function renderBreadcrumb() {
         }
 
 function renderPaginationBar() {
-            if (!currentState.collection || currentState.docId) return '';
+    if (!currentState.collection || currentState.docId) {
+        return '';
+    }
 
-            const col = getCollection(currentState.collection);
-            const docIds = Object.keys(col);
-            const totalDocs = docIds.length;
+    const collection = getCollection(currentState.collection);
+    const totalDocs = Object.keys(collection).length;
 
-            if (totalDocs <= PAGE_SIZE) return '';
+    if (totalDocs <= PAGE_SIZE) {
+        return '';
+    }
 
-            const totalPages = Math.ceil(totalDocs / PAGE_SIZE);
-            const activePage = currentState.currentPage || 1;
-            let html = '<div class="pagination-bar">';
+    const totalPages = Math.ceil(totalDocs / PAGE_SIZE);
+    const currentPage = currentState.currentPage || 1;
 
-            const maxWindow = 7;
-            let start = 1;
-            let end = totalPages;
+    // Decidiamo quante pagine mostrare ai lati del numero corrente
+    const windowSize = 2;           // → mostra ... current-2 ... current ... current+2 ...
+    const maxVisible = 2;           // numero massimo di pulsanti numerici
 
-            if (totalPages > maxWindow) {
-                if (activePage <= 5) {
-                    start = 1;
-                    end = maxWindow;
-                } else if (activePage >= totalPages - 4) {
-                    start = totalPages - maxWindow + 1;
-                    end = totalPages;
-                } else {
-                    start = activePage - 2;
-                    end = activePage + 2;
-                }
-            }
+    let startPage = Math.max(1, currentPage - windowSize);
+    let endPage = Math.min(totalPages, currentPage + windowSize);
 
-            let firstPartEnd = Math.min(4, totalPages);
-            for (let i = 1; i <= firstPartEnd; i++) {
-                html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
-            }
-
-            if (start > 5) {
-                html += `<span class="page-ellipsis">...</span>`;
-            }
-
-            for (let i = Math.max(5, start); i <= Math.min(totalPages - 4, end); i++) {
-                html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
-            }
-
-            if (end < totalPages - 4) {
-                html += `<span class="page-ellipsis">...</span>`;
-            }
-
-            for (let i = Math.max(totalPages - 3, Math.max(end + 1, 5)); i <= totalPages; i++) {
-                html += `<span class="page-num ${i === activePage ? 'active' : ''}" onclick="goToPage(${i})">${i}</span>`;
-            }
-
-            html += '</div>';
-            return html;
+    // Aggiustiamo per mantenere circa maxVisible numeri (o meno)
+    if (endPage - startPage + 1 < maxVisible) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, startPage + maxVisible - 1);
+        } else if (endPage === totalPages) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
         }
+    }
+
+    let html = '<div class="pagination-bar">';
+
+    // Prima pagina + eventuale ellipsis
+    if (startPage > 1) {
+        html += `<span class="page-num" onclick="goToPage(1)">1</span>`;
+        if (startPage > 2) {
+            html += '<span class="page-ellipsis">...</span>';
+        }
+    }
+
+    // Pagine centrali
+    for (let i = startPage; i <= endPage; i++) {
+        html += `
+            <span class="page-num ${i === currentPage ? 'active' : ''}" 
+                  onclick="goToPage(${i})">${i}</span>`;
+    }
+
+    // Ultima pagina + eventuale ellipsis
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += '<span class="page-ellipsis">...</span>';
+        }
+        html += `
+            <span class="page-num" onclick="goToPage(${totalPages})">${totalPages}</span>`;
+    }
+
+    html += '</div>';
+
+    return html;
+}
 
         function goToPage(pageNum) {
             currentState.currentPage = pageNum;
@@ -857,7 +864,9 @@ function renderPaginationBar() {
                         <a class="doc-link" onclick="navigateToField('${collection}', '${docId}', '${fieldName}')">
                             <div class="doc-header-inline">
                                 <span class="doc-icon">${icon}</span>
-                                <span class="doc-title-inline" style="font-weight: 700; color: #202124;">${fieldLabel}</span>
+								<span class="doc-title-inline" style="font-weight: 600; color: #202124;">
+								  ${fieldName === fieldLabel ? fieldLabel : `#${fieldName} ${fieldLabel}`}
+								</span>
                             </div>
                             <div class="doc-preview" style="font-weight: 600; color: #d32f2f;">${label}</div>
                         </a>
