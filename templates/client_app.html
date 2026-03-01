@@ -899,7 +899,7 @@ function renderPaginationBar() {
                     html += `<li class="doc-item">
                         <div class="doc-link" style="cursor: default;">
                             <div class="doc-header-inline">
-                                <span class="doc-icon">📄</span>
+                                <!--<span class="doc-icon">🔤</span>-->
                                 <span class="doc-title-inline">${fieldLabel}</span>
                             </div>
                             <div class="doc-preview">
@@ -1014,7 +1014,7 @@ function renderPaginationBar() {
                         html += `<li class="doc-item">
                             <div class="doc-link" style="cursor: default;">
                                 <div class="doc-header-inline">
-                                    <span class="doc-icon">📄</span>
+                                    <!--<span class="doc-icon">🔤</span> //codice commentato perchè icona gestita ora in renderEditableField-->
                                     <span class="doc-title-inline">${subFieldName}</span>
                                 </div>
                                 <div class="doc-preview">
@@ -1049,8 +1049,13 @@ function renderPaginationBar() {
         
         function renderEditableField(collection, docId, fieldPath, value) {
             const isSimple = typeof value !== 'object';
+            let icon = '🔤';  // default = stringa / altro
+            if (typeof value === 'number') {
+                icon = '🔢';          // oppure '123o '🔢' o '№'
+            }
+            const displayValue = (value === null || value === undefined) ? '—' : String(value);
             return `<div class="field-editable" data-field-path="${fieldPath}" data-doc-id="${docId}" data-collection="${collection}">
-                <span class="field-value-display">${value}</span>
+                <span class="field-value-display"><span class="doc-icon">${icon}</span> ${value}</span>
                 <input type="text" class="field-value-input" value="${value}">
                 <button class="btn-edit" onclick="startEdit(this)" title="Modifica">✏️</button>
                 <button class="btn-expand" onclick="openFullTextPanel(this)" title="Modifica in finestra">📝</button>
