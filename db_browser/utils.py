@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import os
 
@@ -18,59 +19,47 @@ def load_config():
     if os.path.isfile(CONFIG_FILE):
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    return {}
+    print("ATTENZIONE: File config con le label assente. Posizionarlo in db_brow/config/config.json")
+    return {"labelFields": []}
 
 def get_json_path():
     return os.path.join(DATA_DIR, CURRENT_DB)
 
 def load_json():
     path = get_json_path()
+
     
     if os.path.isfile(path):
+        print(f"[DEBUG load_json] E' un file")
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+
         
-        if isinstance(data, dict) and data.get('_db_pointer'):
-            target = data.get('target') or data.get('path')
-            if target:
-                if os.path.isabs(target):
-                    pointer_path = target
-                else:
-                    pointer_path = os.path.abspath(os.path.join(PROJECT_DIR, target))
-                    if not os.path.exists(pointer_path):
-                        pointer_path = os.path.abspath(os.path.join(DATA_DIR, target))
-                if os.path.isfile(pointer_path):
-                    with open(pointer_path, 'r', encoding='utf-8') as f:
-                        return json.load(f)
-                elif os.path.isdir(pointer_path):
-                    root_file = os.path.join(pointer_path, 'root.json')
-                    if os.path.exists(root_file):
-                        with open(root_file, 'r', encoding='utf-8') as f:
-                            root_data = json.load(f)
-                        subdir = root_data.get('path')
-                        if subdir:
-                            pointer_path = os.path.join(pointer_path, subdir)
-                    return load_directory(pointer_path)
-        
-        if isinstance(data, dict) and data.get('path'):
-            target_path = data.get('path')
-            if os.path.isabs(target_path):
-                pointer_path = target_path
+        target = data.get('target') if isinstance(data, dict) else None
+
+        if target:
+            print(f"[DEBUG load_json] Risoluzione target: {target}")
+            
+            if os.path.isabs(target):
+                pointer_path = target
             else:
-                pointer_path = os.path.abspath(os.path.join(PROJECT_DIR, target_path))
+                pointer_dir = os.path.dirname(path)
+                pointer_path = os.path.abspath(os.path.join(pointer_dir, target))
+                print(f"[DEBUG load_json]Rispetto a pointer dir {pointer_dir}: {pointer_path}")
+            
+
             
             if os.path.isfile(pointer_path):
+                print(f"[DEBUG load_json] Carico file JSON: {pointer_path}")
                 with open(pointer_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
+            
             elif os.path.isdir(pointer_path):
-                root_file = os.path.join(pointer_path, 'root.json')
-                if os.path.exists(root_file):
-                    with open(root_file, 'r', encoding='utf-8') as f:
-                        root_data = json.load(f)
-                    subdir = root_data.get('path')
-                    if subdir:
-                        pointer_path = os.path.join(pointer_path, subdir)
+                print(f"[DEBUG load_json] E' una directory, chiamo load_directory")
                 return load_directory(pointer_path)
+            else:
+                print(f"[ERRORE] Percorso non esiste: {pointer_path}")
+                return {}
         
         if isinstance(data, list):
             collection_name = os.path.splitext(CURRENT_DB)[0]
@@ -79,30 +68,55 @@ def load_json():
         return data
     
     elif os.path.isdir(path):
+        print(f"[DEBUG load_json] E' una directory, chiamo load_directory")
         return load_directory(path)
     
+    print(f"[ERRORE] Percorso non esiste: {path}")
     return {}
 
 def load_directory(dir_path):
+    if not os.path.isdir(dir_path):
+        print(f"[ERRORE] Directory non esiste: {dir_path}")
+        return {}
     dir_name = os.path.basename(dir_path)
     result = {dir_name: {}}
     
-    for filename in os.listdir(dir_path):
-        if filename.startswith('.'):
-            continue
-        file_path = os.path.join(dir_path, filename)
-        if filename.endswith('.json'):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                doc_id = filename[:-5]
-                if isinstance(data, list):
-                    for idx, item in enumerate(data):
-                        result[dir_name][f"{doc_id}_{idx}"] = item
-                else:
-                    result[dir_name][doc_id] = data
-            except:
-                pass
+    files_found = []
+    try:
+        entries = os.listdir(dir_path)
+        print(f"[DEBUG load_directory] Totale entries: {len(entries)}")
+        for filename in entries:
+            if filename.startswith('.'):
+                continue
+            file_path = os.path.join(dir_path, filename)
+            if filename.endswith('.json'):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    doc_id = filename[:-5]
+                    if isinstance(data, list):
+                        result[dir_name][doc_id] = data
+                    else:
+                        result[dir_name][doc_id] = data
+                    
+                    files_found.append(filename)
+                except json.JSONDecodeError as e:
+                    print(f"[ERRORE] JSON non valido {filename}: {e}")
+                except Exception as e:
+                    print(f"[ERRORE] Lettura {filename}: {e}")
+            else:
+                print(f"[DEBUG load_directory] Skip non-JSON: {filename}")
+    except PermissionError as e:
+        print(f"[ERRORE] Permesso negato: {dir_path}: {e}")
+    except Exception as e:
+        print(f"[ERRORE] Lettura directory {dir_path}: {e}")
+    
+    print(f"\n[DEBUG load_directory] FINE")
+    print(f"[DEBUG load_directory] File caricati: {len(files_found)}")
+    print(f"[DEBUG load_directory] result keys: {list(result.keys())}")
+    print(f"{'='*60}\n")
+    
     return result
 
 def get_databases():
@@ -115,58 +129,67 @@ def get_databases():
             databases.append(item)
     return sorted(databases)
 
-def save_json(data):
+def save_json(data, doc_id=None, collection=None):
     path = get_json_path()
+
+    print(f"{'='*60}")
     
     if os.path.isfile(path):
         with open(path, 'r', encoding='utf-8') as f:
             file_data = json.load(f)
         
-        if isinstance(file_data, dict) and file_data.get('_db_pointer'):
-            target = file_data.get('target')
-            if target:
-                pointer_path = os.path.join(DATA_DIR, target)
-                if os.path.isdir(pointer_path):
-                    root_file = os.path.join(pointer_path, 'root.json')
-                    if os.path.exists(root_file):
-                        with open(root_file, 'r', encoding='utf-8') as f:
-                            root_data = json.load(f)
-                        subdir = root_data.get('path')
-                        if subdir:
-                            pointer_path = os.path.join(pointer_path, subdir)
-                    for collection_name, collection_data in data.items():
-                        file_path = os.path.join(pointer_path, f"{collection_name}.json")
-                        with open(file_path, 'w', encoding='utf-8') as f:
-                            json.dump(collection_data, f, indent=2, ensure_ascii=False)
-                    return
+        target = file_data.get('target') if isinstance(file_data, dict) else None
+        print(f"[DEBUG save_json] target nel file pointer: {target}")
         
-        if isinstance(file_data, dict) and file_data.get('path'):
-            target_path = file_data.get('path')
-            if os.path.isabs(target_path):
-                pointer_path = target_path
+        if target:
+            if os.path.isabs(target):
+                pointer_path = target
             else:
-                pointer_path = os.path.join(os.path.dirname(path), target_path)
+                pointer_dir = os.path.dirname(path)
+                pointer_path = os.path.abspath(os.path.join(pointer_dir, target))
+            
+            print(f"[DEBUG save_json] pointer_path: {pointer_path}")
             
             if os.path.isdir(pointer_path):
-                root_file = os.path.join(pointer_path, 'root.json')
-                if os.path.exists(root_file):
-                    with open(root_file, 'r', encoding='utf-8') as f:
-                        root_data = json.load(f)
-                    subdir = root_data.get('path')
-                    if subdir:
-                        pointer_path = os.path.join(pointer_path, subdir)
+                # CASO: Pointer a directory
+                # Se abbiamo doc_id e collection, salviamo solo quel file
+                if doc_id and collection and collection in data:
+                    doc_data = data[collection].get(str(doc_id))
+                    if doc_data is not None:
+                        file_path = os.path.join(pointer_path, f"{doc_id}.json")
+                        print(f"[DEBUG save_json] Salvo solo file specifico: {file_path}")
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            json.dump(doc_data, f, indent=2, ensure_ascii=False)
+                        print(f"[DEBUG save_json] Salvataggio completato")
+                        return
+                    else:
+                        print(f"[DEBUG save_json] doc_id non trovato, fallback a salvataggio completo")
+                
+                # DEFAULT: Salva tutti i file (retrocompatibile)
                 for collection_name, collection_data in data.items():
-                    file_path = os.path.join(pointer_path, f"{collection_name}.json")
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        json.dump(collection_data, f, indent=2, ensure_ascii=False)
+                    if isinstance(collection_data, dict):
+                        for doc_id_key, doc_data in collection_data.items():
+                            file_path = os.path.join(pointer_path, f"{doc_id_key}.json")
+                            print(f"[DEBUG save_json] Scrivo: {file_path}")
+                            with open(file_path, 'w', encoding='utf-8') as f:
+                                json.dump(doc_data, f, indent=2, ensure_ascii=False)
+                print(f"[DEBUG save_json] Salvataggio completato")
                 return
     
     elif os.path.isdir(path):
+        # CASO: Directory (non pointer)
         for collection_name, collection_data in data.items():
-            file_path = os.path.join(path, f"{collection_name}.json")
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(collection_data, f, indent=2, ensure_ascii=False)
+            if isinstance(collection_data, dict):
+                for doc_id_key, doc_data in collection_data.items():
+                    file_path = os.path.join(path, f"{doc_id_key}.json")
+                    print(f"[DEBUG save_json] Scrivo: {file_path}")
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        json.dump(doc_data, f, indent=2, ensure_ascii=False)
+        print(f"[DEBUG save_json] Salvataggio completato")
         return
     
+    # CASO: File unico (retrocompatibile)
+    print(f"[DEBUG save_json] Scrivo file diretto: {path}")
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    print(f"[DEBUG save_json] FINE")

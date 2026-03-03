@@ -8,7 +8,7 @@ from .utils import (
     set_current_db
 )
 
-bp = Blueprint('db_browser', __name__)
+bp = Blueprint('db_browser', __name__, template_folder='templates')
 
 @bp.route('/')
 def index():
@@ -66,7 +66,7 @@ def save_field():
         elif isinstance(current, list):
             current[int(final_key)] = new_value
         
-        save_json(data)
+        save_json(data, doc_id=doc_id, collection=collection)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -538,7 +538,7 @@
                 <div>
                     <h1>TinyDB Browser</h1>
                     <div class="db-selector">
-                        <form action="/select-db" method="POST">
+                        <form action="select-db" method="POST">
                             <select name="database" onchange="this.form.submit()">
                                 {% for db in databases %}
                                 <option value="{{ db }}" {% if db == current_db %}selected{% endif %}>{{ db }}</option>
@@ -1164,7 +1164,7 @@ function render() {
             const newValue = input.value;
             
             try {
-                const response = await fetch('/api/save', {
+                const response = await fetch('api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1207,7 +1207,10 @@ function render() {
             const collection = container.dataset.collection;
             const docId = container.dataset.docId;
             const fieldPath = container.dataset.fieldPath;
-            const value = container.querySelector('.field-value-display').textContent;
+            const displayEl = container.querySelector('.field-value-display');
+            const iconEl = displayEl.querySelector('.doc-icon');
+            const iconText = iconEl ? iconEl.textContent : '';
+            const value = displayEl.textContent.replace(iconText, '').trim();
             
             currentFullTextData = { collection, docId, fieldPath };
             
@@ -1265,7 +1268,7 @@ function render() {
             status.className = 'full-text-status';
             
             try {
-                const response = await fetch('/api/save', {
+                const response = await fetch('api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
